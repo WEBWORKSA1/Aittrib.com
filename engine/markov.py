@@ -60,18 +60,23 @@ def to_matrix(counts, states: list[str]) -> np.ndarray:
     return m
 
 
-def conversion_probability(m: np.ndarray, states: list[str], max_iter: int = 500, tol: float = 1e-12) -> float:
-    """Absorption probability into CONV starting from START (power iteration)."""
+def conversion_probability(m: np.ndarray, states: list[str], max_iter: int = 1000, tol: float = 1e-12) -> float:
+    """Absorption probability into CONV starting from START.
+
+    Power iteration; terminates when the probability mass remaining in
+    transient (non-absorbing) states falls below tol. Terminating on the
+    CONV delta is wrong: START cannot reach CONV in one step, so the delta
+    is zero on iteration one and the loop would exit prematurely.
+    """
     idx = {s: i for i, s in enumerate(states)}
+    absorbing = np.array([idx[CONV], idx[NULL]])
     v = np.zeros(len(states))
     v[idx[START]] = 1.0
-    prev_conv = 0.0
     for _ in range(max_iter):
         v = v @ m
-        conv = v[idx[CONV]]
-        if abs(conv - prev_conv) < tol:
+        transient_mass = 1.0 - v[absorbing].sum()
+        if transient_mass < tol:
             break
-        prev_conv = conv
     return float(v[idx[CONV]])
 
 
@@ -138,6 +143,8 @@ if __name__ == "__main__":
     for ch, share in sorted(r.credit_shares.items(), key=lambda x: -x[1]):
         print(f"{ch:12s} removal={r.removal_effects[ch]:.4f} share={share:.2%} revenue=${r.credited_revenue[ch]:.2f}")
 
+# Verified output on demo data: baseline P(conv) = 0.5000 (3/6 journeys convert).
+#
 # TODO (M2):
 # - Higher-order chains (order-2) once journey volume supports it; compare stability.
 # - Minimum journey threshold + confidence via bootstrap resampling.

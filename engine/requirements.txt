@@ -1,0 +1,3 @@
+numpy>=1.26
+pandas>=2.1
+# M2: pymc or numpyro for MMM — decide when implementing, not before
